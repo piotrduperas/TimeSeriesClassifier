@@ -1,6 +1,3 @@
-from numpy.core.fromnumeric import shape
-import pandas as pd 
-import scipy as sp
 import numpy as np
 from PIL import Image, ImageDraw
 
@@ -11,7 +8,6 @@ from os import walk
 
 from matplotlib import pyplot
 from mpl_toolkits.mplot3d import Axes3D
-import random
 
 import imageio
 import glob
@@ -32,6 +28,7 @@ for folder in folders:
             break
 
 for (folder, category, file) in f:
+# uncomment lines below to prevent files generation
 #    pass
 #for i in range(1,1):
     dataframe = read_csv(folder+category+'/'+file+'.csv', header=None)

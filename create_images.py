@@ -17,25 +17,25 @@ from tensorflow.keras import optimizers
 # from mpl_toolkits.mplot3d import Axes3D
 
 
-s = 64
-w = s
-h = s
+IMAGE_WIDTH = 64
+IMAGE_HEIGHT = 64
+CATEGORY_COUNT = 8
 
-directories = ['data/test/', 'data/train/']
+directories = ["data/test", "data/train/"]
 
-f = []
+files = []
 
 for directory in directories:
-    for category in range(1, 9):
+    for category in range(1, CATEGORY_COUNT + 1):
         for (dirpath, dirnames, filenames) in os.walk(path.join(directory, str(category))):
-            f.extend([(directory, str(category), s.split('.')[0]) for s in filenames])
+            files.extend([(directory, str(category), filename.split('.')[0]) for filename in filenames])
             break
 
-for (directory, category, file) in f:
+for (directory, category, file) in files:
 # uncomment lines below to prevent files generation
 #    pass
 #for i in range(1,1):
-    dataframe = read_csv(directory + category + '/' + file + '.csv', header=None)
+    dataframe = read_csv(f"{path.join(directory, category, file)}.csv", header=None)
     array = dataframe.values
     # separate array into input and output components
     X = array[:]
@@ -60,31 +60,28 @@ for (directory, category, file) in f:
     # summarize transformed data
     numpy.set_printoptions(precision=3)
 
-
     for dim in range(0, 1):
-        out = Image.new("RGB", (w, s), (0, 0, 0))
+        out = Image.new("RGB", (IMAGE_WIDTH, IMAGE_HEIGHT), (0, 0, 0))
 
         # get a drawing context
         d = ImageDraw.Draw(out)
 
         for j in range(1, len(rX)):
-            
-            #print(rX[i])\
             row = rX[j]
             m = j
-            x, y = (row[dim] * s % s), (row[(dim + 6)] * s) % s
+            x, y = (row[dim] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[(dim + 6)] * IMAGE_HEIGHT) % IMAGE_HEIGHT
             uu = out.getpixel((x, y))
             d.point((x, y), fill=(255 - m * 5 // 6, uu[1], uu[2]))
-            uu = out.getpixel(((row[dim+1] * s % s), (row[(dim + 7)] * s) % s))
+            uu = out.getpixel(((row[dim + 1] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[(dim + 7)] * IMAGE_HEIGHT) % IMAGE_HEIGHT))
 
-            d.point((row[dim+1] * s, row[(dim + 7)] * s), fill=(uu[0], 255 - m * 5 // 6, uu[2]))
-            uu = out.getpixel(((row[dim+2] * s % s), (row[(dim + 8)] * s) % s))
+            d.point((row[dim + 1] * IMAGE_HEIGHT, row[(dim + 7)] * IMAGE_HEIGHT), fill=(uu[0], 255 - m * 5 // 6, uu[2]))
+            uu = out.getpixel(((row[dim + 2] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[(dim + 8)] * IMAGE_HEIGHT) % IMAGE_HEIGHT))
 
-            d.point((row[dim+2] * s, row[(dim + 8)] * s), fill=(uu[0], uu[1], 255 - m * 5 // 6))
+            d.point((row[dim + 2] * IMAGE_HEIGHT, row[(dim + 8)] * IMAGE_HEIGHT), fill=(uu[0], uu[1], 255 - m * 5 // 6))
 
         # draw multiline text
         #out.show()
-        out.save('pictures/'+category+'_'+file+'_'+str(dim)+'.png', "PNG")
+        out.save(f"pictures/{category}_{file}_{dim}.png", "PNG")
 
     #fig = pyplot.figure()
     #ax = Axes3D(fig)
@@ -102,7 +99,7 @@ im_y = []
 
 for im_path in glob.glob("pictures/*.png"):
     im = imageio.imread(im_path)
-    img_name = im_path.split('/')[1].split('.')[0]
+    img_name = path.split(im_path)[-1].split('.')[0]
     img_dim = img_name.split('_')[2]
     img_cat = img_name.split('_')[0]
     if img_dim == '0':
@@ -111,10 +108,10 @@ for im_path in glob.glob("pictures/*.png"):
     # do whatever wit
 
 im_x = numpy.array(im_x)
-im_x = im_x.reshape((im_x.shape[0], w, h, 3))
+im_x = im_x.reshape((im_x.shape[0], IMAGE_WIDTH, IMAGE_HEIGHT, 3))
 
-x_train = im_x[:2500].astype('float32')
-x_test = im_x[2500:].astype('float32')
+x_train = im_x[:2500].astype("float32")
+x_test = im_x[2500:].astype("float32")
 x_train /= 255
 x_test /= 255
 
@@ -124,19 +121,19 @@ y_test = keras.utils.np_utils.to_categorical(im_y[2500:], num_classes)
 
 model = Sequential()
 model.add(Conv2D(64, kernel_size=(3, 3),
-                 activation='relu',
-                 input_shape=(w, h, 3)))
-model.add(Conv2D(128, (4, 4), activation='relu'))
+                 activation="relu",
+                 input_shape=(IMAGE_WIDTH, IMAGE_HEIGHT, 3)))
+model.add(Conv2D(128, (4, 4), activation="relu"))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Dropout(0.25))
 model.add(Flatten())
-model.add(Dense(128, activation='relu'))
+model.add(Dense(128, activation="relu"))
 model.add(Dropout(0.5))
-model.add(Dense(num_classes, activation='softmax'))
+model.add(Dense(num_classes, activation="softmax"))
 
 model.compile(loss=keras.losses.categorical_crossentropy,
               optimizer=optimizers.Adam(),
-              metrics=['accuracy'])
+              metrics=["accuracy"])
 
 model.fit(x_train, y_train,
           batch_size=128,
@@ -145,5 +142,5 @@ model.fit(x_train, y_train,
           validation_data=(x_test, y_test))
 
 score = model.evaluate(x_test, y_test, verbose=0)
-print('Test loss:', score[0])
-print('Test accuracy:', score[1])
+print("Test loss:", score[0])
+print("Test accuracy:", score[1])

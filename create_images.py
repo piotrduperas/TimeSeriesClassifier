@@ -21,7 +21,7 @@ IMAGE_WIDTH = 64
 IMAGE_HEIGHT = 64
 CATEGORY_COUNT = 8
 
-directories = ["data/test", "data/train/"]
+directories = ["data/test", "data/train"]
 
 files = []
 

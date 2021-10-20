@@ -1,16 +1,19 @@
-import numpy as np
-from PIL import Image, ImageDraw
-
-from sklearn.preprocessing import MinMaxScaler
-from pandas import read_csv
-
-from os import walk
-
-from matplotlib import pyplot
-from mpl_toolkits.mplot3d import Axes3D
-
-import imageio
 import glob
+import imageio
+import keras
+import numpy
+import os
+
+from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
+from keras.models import Sequential
+from keras.utils import np_utils
+from pandas import read_csv
+from PIL import Image, ImageDraw
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras import optimizers
+
+# from matplotlib import pyplot
+# from mpl_toolkits.mplot3d import Axes3D
 
 
 s = 64
@@ -23,7 +26,7 @@ f = []
 
 for folder in folders:
     for category in range(1, 9):
-        for (dirpath, dirnames, filenames) in walk(folder+str(category)):
+        for (dirpath, dirnames, filenames) in os.walk(folder+str(category)):
             f.extend([(folder, str(category), s.split('.')[0]) for s in filenames])
             break
 
@@ -35,23 +38,23 @@ for (folder, category, file) in f:
     array = dataframe.values
     # separate array into input and output components
     X = array[:]
-    diff = np.diff(X, axis=0)
-    aaa = np.vstack((diff, np.array([[0, 0, 0]])))
+    diff = numpy.diff(X, axis=0)
+    aaa = numpy.vstack((diff, numpy.array([[0, 0, 0]])))
 
-    X = np.hstack((X, aaa))
+    X = numpy.hstack((X, aaa))
 
-    aaa = np.vstack((np.diff(diff, axis=0), np.array([[0, 0, 0],[0,0,0]])))
+    aaa = numpy.vstack((numpy.diff(diff, axis=0), numpy.array([[0, 0, 0],[0,0,0]])))
 
-    X = np.hstack((X, aaa))
+    X = numpy.hstack((X, aaa))
 
     #X[:-1,:-1] = X[1:, 0:3] - X[:-1, 0:3]
     scaler = MinMaxScaler(feature_range=(0, 1))
     xmin = X.min()
     xmax = X.max()
-    scaler.fit(np.array([[xmin, xmin, xmin, xmin / 14, xmin / 14, xmin / 14, xmin / 14, xmin / 14, xmin / 14],[xmax, xmax, xmax, xmax / 14, xmax / 14, xmax / 14, xmax / 14, xmax / 14, xmax / 14]]))
+    scaler.fit(numpy.array([[xmin, xmin, xmin, xmin / 14, xmin / 14, xmin / 14, xmin / 14, xmin / 14, xmin / 14],[xmax, xmax, xmax, xmax / 14, xmax / 14, xmax / 14, xmax / 14, xmax / 14, xmax / 14]]))
     rX = scaler.transform(X)
     # summarize transformed data
-    np.set_printoptions(precision=3)
+    numpy.set_printoptions(precision=3)
 
 
     for dim in range(0, 1):
@@ -88,14 +91,7 @@ for (folder, category, file) in f:
 
     #ax.scatter(sequence_containing_x_vals, sequence_containing_y_vals, sequence_containing_z_vals)
     #pyplot.show()
-import keras
-from keras.datasets import mnist
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten
-from keras.layers import Conv2D, MaxPooling2D
-from keras import backend as K
-from keras.utils import np_utils
-from tensorflow.keras import optimizers
+
 
 im_x = []
 im_y = []
@@ -110,7 +106,7 @@ for im_path in glob.glob("pictures/*.png"):
          im_y.append(int(img_cat) - 1)
      # do whatever wit
 
-im_x = np.array(im_x)
+im_x = numpy.array(im_x)
 im_x = im_x.reshape((im_x.shape[0], w, h, 3))
 
 x_train = im_x[:2500].astype('float32')

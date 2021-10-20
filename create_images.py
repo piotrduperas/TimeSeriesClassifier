@@ -7,6 +7,7 @@ import os
 from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 from keras.models import Sequential
 from keras.utils import np_utils
+from os import path
 from pandas import read_csv
 from PIL import Image, ImageDraw
 from sklearn.preprocessing import MinMaxScaler
@@ -20,21 +21,21 @@ s = 64
 w = s
 h = s
 
-folders = ['data/test/', 'data/train/']
+directories = ['data/test/', 'data/train/']
 
 f = []
 
-for folder in folders:
+for directory in directories:
     for category in range(1, 9):
-        for (dirpath, dirnames, filenames) in os.walk(folder+str(category)):
-            f.extend([(folder, str(category), s.split('.')[0]) for s in filenames])
+        for (dirpath, dirnames, filenames) in os.walk(path.join(directory, str(category))):
+            f.extend([(directory, str(category), s.split('.')[0]) for s in filenames])
             break
 
-for (folder, category, file) in f:
+for (directory, category, file) in f:
 # uncomment lines below to prevent files generation
 #    pass
 #for i in range(1,1):
-    dataframe = read_csv(folder+category+'/'+file+'.csv', header=None)
+    dataframe = read_csv(directory + category + '/' + file + '.csv', header=None)
     array = dataframe.values
     # separate array into input and output components
     X = array[:]
@@ -43,7 +44,7 @@ for (folder, category, file) in f:
 
     X = numpy.hstack((X, aaa))
 
-    aaa = numpy.vstack((numpy.diff(diff, axis=0), numpy.array([[0, 0, 0],[0,0,0]])))
+    aaa = numpy.vstack((numpy.diff(diff, axis=0), numpy.array([[0, 0, 0], [0, 0, 0]])))
 
     X = numpy.hstack((X, aaa))
 
@@ -51,7 +52,10 @@ for (folder, category, file) in f:
     scaler = MinMaxScaler(feature_range=(0, 1))
     xmin = X.min()
     xmax = X.max()
-    scaler.fit(numpy.array([[xmin, xmin, xmin, xmin / 14, xmin / 14, xmin / 14, xmin / 14, xmin / 14, xmin / 14],[xmax, xmax, xmax, xmax / 14, xmax / 14, xmax / 14, xmax / 14, xmax / 14, xmax / 14]]))
+    scaler.fit(numpy.array([
+        [xmin, xmin, xmin, xmin / 14, xmin / 14, xmin / 14, xmin / 14, xmin / 14, xmin / 14],
+        [xmax, xmax, xmax, xmax / 14, xmax / 14, xmax / 14, xmax / 14, xmax / 14, xmax / 14]
+    ]))
     rX = scaler.transform(X)
     # summarize transformed data
     numpy.set_printoptions(precision=3)
@@ -68,15 +72,15 @@ for (folder, category, file) in f:
             #print(rX[i])\
             row = rX[j]
             m = j
-            x, y = (row[dim] * s % s), (row[(dim + 6)] * s)%s
+            x, y = (row[dim] * s % s), (row[(dim + 6)] * s) % s
             uu = out.getpixel((x, y))
             d.point((x, y), fill=(255 - m * 5 // 6, uu[1], uu[2]))
-            uu = out.getpixel(((row[dim+1] * s % s), (row[(dim + 7)] * s)%s))
+            uu = out.getpixel(((row[dim+1] * s % s), (row[(dim + 7)] * s) % s))
 
-            d.point((row[dim+1] * s, row[(dim +7)] * s), fill=(uu[0], 255 - m * 5 // 6, uu[2]))
-            uu = out.getpixel(((row[dim+2] * s % s), (row[(dim + 8)] * s)%s))
+            d.point((row[dim+1] * s, row[(dim + 7)] * s), fill=(uu[0], 255 - m * 5 // 6, uu[2]))
+            uu = out.getpixel(((row[dim+2] * s % s), (row[(dim + 8)] * s) % s))
 
-            d.point((row[dim+2] * s, row[(dim +8)] * s), fill=(uu[0], uu[1], 255 - m * 5 // 6))
+            d.point((row[dim+2] * s, row[(dim + 8)] * s), fill=(uu[0], uu[1], 255 - m * 5 // 6))
 
         # draw multiline text
         #out.show()
@@ -97,14 +101,14 @@ im_x = []
 im_y = []
 
 for im_path in glob.glob("pictures/*.png"):
-     im = imageio.imread(im_path)
-     img_name = im_path.split('/')[1].split('.')[0]
-     img_dim = img_name.split('_')[2]
-     img_cat = img_name.split('_')[0]
-     if img_dim == '0':
-         im_x.append(im[:,:])
-         im_y.append(int(img_cat) - 1)
-     # do whatever wit
+    im = imageio.imread(im_path)
+    img_name = im_path.split('/')[1].split('.')[0]
+    img_dim = img_name.split('_')[2]
+    img_cat = img_name.split('_')[0]
+    if img_dim == '0':
+        im_x.append(im[:, :])
+        im_y.append(int(img_cat) - 1)
+    # do whatever wit
 
 im_x = numpy.array(im_x)
 im_x = im_x.reshape((im_x.shape[0], w, h, 3))

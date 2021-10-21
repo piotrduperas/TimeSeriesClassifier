@@ -30,9 +30,6 @@ for directory in directories:
             break
 
 for (directory, category, file) in files:
-# uncomment lines below to prevent files generation
-#    pass
-#for i in range(1,1):
     dataframe = read_csv(f"{path.join(directory, category, file)}.csv", header=None)
     X = dataframe.values
 
@@ -65,7 +62,7 @@ for (directory, category, file) in files:
         row = scaled_X[i]
 
         # x and ddx
-        x, y = (row[0] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[(6)] * IMAGE_HEIGHT) % IMAGE_HEIGHT
+        x, y = (row[0] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[6] * IMAGE_HEIGHT) % IMAGE_HEIGHT
 
         # red
         current_color = out.getpixel((x, y))

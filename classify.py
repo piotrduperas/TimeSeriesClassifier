@@ -15,13 +15,27 @@ from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras import optimizers
 
 
+def add_differentials(data: numpy.ndarray, differential_count: int) -> numpy.ndarray:
+    result = data.copy()
+    filler = numpy.zeros(3)
+
+    for i in range(differential_count):
+        values_to_differentiate: numpy.ndarray = result[:, -3:]
+        differentials = numpy.diff(values_to_differentiate, axis=0)
+        differentials = numpy.vstack([filler, differentials])     # add missing values
+        result = numpy.hstack([result, differentials])
+
+    return result
+
+
+# constants
 IMAGE_WIDTH = 64
 IMAGE_HEIGHT = 64
 CATEGORY_COUNT = 8
 
 directories = ["data/test", "data/train"]
 
-files = []
+files: list[tuple[str, str, str]] = []
 
 for directory in directories:
     for category in range(1, CATEGORY_COUNT + 1):
@@ -32,16 +46,7 @@ for directory in directories:
 for (directory, category, file) in files:
     dataframe = read_csv(f"{path.join(directory, category, file)}.csv", header=None)
     X = dataframe.values
-
-    # add vector of 1st differentials
-    differentials = numpy.diff(X, axis=0)
-    replenished_differentials = numpy.vstack([numpy.array([[0, 0, 0]]), differentials])
-    X = numpy.hstack([X, replenished_differentials])
-
-    # add vector of 2nd differentials
-    second_differentials = numpy.diff(differentials, axis=0)
-    replenished_second_differentials = numpy.vstack([numpy.array([[0, 0, 0], [0, 0, 0]]), second_differentials])
-    X = numpy.hstack([X, replenished_second_differentials])
+    X = add_differentials(X, 2)
 
     scaler = MinMaxScaler(feature_range=(0, 1))
     xmin = X.min()

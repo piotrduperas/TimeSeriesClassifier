@@ -13,6 +13,8 @@ from pandas import read_csv
 from PIL import Image, ImageDraw
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras import optimizers
+
+
 def add_differentials(data: numpy.ndarray, differential_count: int) -> numpy.ndarray:
     result = data.copy()
     filler = numpy.zeros(3)
@@ -24,6 +26,36 @@ def add_differentials(data: numpy.ndarray, differential_count: int) -> numpy.nda
         result = numpy.hstack([result, differentials])
 
     return result
+
+
+def generate_scaler_array(xmin: float, xmax: float, dimension_count: int, differential_count: int) -> numpy.ndarray:
+    base = numpy.array([[xmin], [xmax]])
+
+    v = 14
+    first_diff_base = numpy.array([[xmin / v], [xmax / v]])
+    next_diff_base = numpy.array([[xmin / v / 3], [xmax / v / 3]])
+
+    array = numpy.array(base)
+    first_diff_array = numpy.array(first_diff_base)
+    next_diff_array = numpy.array(next_diff_base)
+
+    for i in range(dimension_count - 1):
+        array = numpy.hstack([array, base])
+        first_diff_array = numpy.hstack([first_diff_array, first_diff_base])
+        next_diff_array = numpy.hstack([next_diff_array, next_diff_base])
+
+    if differential_count == 0:
+        return array
+
+    array = numpy.hstack([array, first_diff_array])
+
+    if differential_count == 1:
+        return array
+
+    for i in range(differential_count - 1):
+        array = numpy.hstack([array, next_diff_array])
+
+    return array
 
 
 # constants
@@ -43,27 +75,23 @@ for directory in directories:
 
 for (directory, category, file) in files:
     dataframe = read_csv(f"{path.join(directory, category, file)}.csv", header=None)
+
     X_raw = dataframe.values
     X = dataframe.values
-
-
 
     X = add_differentials(X, 3)
     X_raw = add_differentials(X_raw, 3)
 
     for i in range(2, len(X) - 2):
-        X[i] = (X_raw[i] * 2 + X_raw[i-1] * 1 + X_raw[i+1] * 1) / 4;
+        X[i] = (X_raw[i] * 2 + X_raw[i-1] * 1 + X_raw[i+1] * 1) / 4
 
     v = 14
 
     scaler = MinMaxScaler(feature_range=(0, 1))
-    xmin = X.min()
-    xmax = X.max()
-    scaler.fit(numpy.array([
-        # x     y     z      dx         dy         dz         ddx        ddy        ddz
-        [xmin, xmin, xmin, xmin / v, xmin / v, xmin / v, xmin / v / 3, xmin / v / 3, xmin / v / 3, xmin / v / 3, xmin / v / 3, xmin / v / 3],
-        [xmax, xmax, xmax, xmax / v, xmax / v, xmax / v, xmax / v / 3, xmax / v / 3, xmax / v / 3, xmax / v / 3, xmax / v / 3, xmax / v / 3]
-    ]))
+    xmin: float = X.min()
+    xmax: float = X.max()
+
+    scaler.fit(generate_scaler_array(xmin, xmax, 3, 2))
     scaled_X = scaler.transform(X)
 
     out = Image.new("RGB", (IMAGE_WIDTH, IMAGE_HEIGHT), (0, 0, 0))
@@ -73,15 +101,12 @@ for (directory, category, file) in files:
 
     mid = IMAGE_HEIGHT // 2 - 1
 
-        
     for ii in range(0, len(scaled_X)):
         i = len(scaled_X) - 1 - ii
         row = scaled_X[i]
 
         intensity = 255 - i * 8 // 9
         intensity = intensity // 3
-        #if intensity < 5:
-        #  intensity = 5
         x_row = 6
         y_row = 6
 
@@ -102,14 +127,11 @@ for (directory, category, file) in files:
         d.point((row[x_row + 2] * IMAGE_HEIGHT, mid),
                 fill=(current_color[0], current_color[1], intensity))
 
-        
     for ii in range(0, len(scaled_X)):
         i = len(scaled_X) - 1 - ii
         row = scaled_X[i]
 
         intensity = 255 - i * 8 // 9
-        #if intensity < 5:
-        #  intensity = 5
         x_row = 3
         y_row = 3
 
@@ -135,8 +157,6 @@ for (directory, category, file) in files:
         row = scaled_X[i]
 
         intensity = 255 - i * 8 // 9
-        #if intensity < 5:
-        #  intensity = 5
         x_row = 0
         y_row = 0
 
@@ -156,10 +176,10 @@ for (directory, category, file) in files:
         current_color = out.getpixel(((row[x_row + 2] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[y_row + 2] * IMAGE_HEIGHT) % IMAGE_HEIGHT))
         d.point((row[x_row + 2] * IMAGE_HEIGHT, row[(y_row + 2)] * IMAGE_HEIGHT),
                 fill=(current_color[0], current_color[1], intensity))
-    
 
     out.save(f"pictures/{category}_{file}.png", "PNG")
 
+exit()
 
 im_x = []
 im_y = []
@@ -212,4 +232,3 @@ model.fit(x_train, y_train,
           epochs=64,
           verbose=1,
           validation_data=(x_test, y_test))
-          

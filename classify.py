@@ -75,23 +75,22 @@ for directory in directories:
 
 for (directory, category, file) in files:
     dataframe = read_csv(f"{path.join(directory, category, file)}.csv", header=None)
+    dimension_count = dataframe.shape[1]
 
     X_raw = dataframe.values
     X = dataframe.values
 
-    X = add_differentials(X, 3, 2)
-    X_raw = add_differentials(X_raw, 3, 2)
+    X = add_differentials(X, dimension_count, 2)
+    X_raw = add_differentials(X_raw, dimension_count, 2)
 
     for i in range(2, len(X) - 2):
         X[i] = (X_raw[i] * 2 + X_raw[i-1] * 1 + X_raw[i+1] * 1) / 4
-
-    v = 14
 
     scaler = MinMaxScaler(feature_range=(0, 1))
     xmin: float = X.min()
     xmax: float = X.max()
 
-    scaler.fit(generate_scaler_array(xmin, xmax, 3, 2))
+    scaler.fit(generate_scaler_array(xmin, xmax, dimension_count, 2))
     scaled_X = scaler.transform(X)
 
     out = Image.new("RGB", (IMAGE_WIDTH, IMAGE_HEIGHT), (0, 0, 0))
@@ -110,17 +109,22 @@ for (directory, category, file) in files:
         x_row = 6
         y_row = 6
 
-        # x and ddx
         x, y = (row[x_row] * IMAGE_HEIGHT % IMAGE_HEIGHT), mid
 
         # red
         current_color = out.getpixel((x, mid))
         d.point((x, mid), fill=(intensity, current_color[1], current_color[2]))
 
+        if dimension_count == 1:
+            continue
+
         # green
         current_color = out.getpixel((((row[x_row + 1] * IMAGE_HEIGHT) % IMAGE_HEIGHT), mid))
         d.point((row[x_row + 1] * IMAGE_HEIGHT, mid),
                 fill=(current_color[0], intensity, current_color[2]))
+
+        if dimension_count == 2:
+            continue
 
         # blue
         current_color = out.getpixel(((row[x_row + 2] * IMAGE_HEIGHT % IMAGE_HEIGHT), mid))
@@ -135,17 +139,22 @@ for (directory, category, file) in files:
         x_row = 3
         y_row = 3
 
-        # x and ddx
         x, y = (row[x_row] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[y_row] * IMAGE_HEIGHT) % IMAGE_HEIGHT
 
         # red
         current_color = out.getpixel((x, IMAGE_HEIGHT - 1 - y))
         d.point((x, IMAGE_HEIGHT - 1 - y), fill=(intensity, current_color[1], current_color[2]))
 
+        if dimension_count == 1:
+            continue
+
         # green
         current_color = out.getpixel((((row[x_row + 1] * IMAGE_HEIGHT) % IMAGE_HEIGHT), IMAGE_HEIGHT - 1 - ((row[y_row + 1] * IMAGE_HEIGHT)) % IMAGE_HEIGHT))
         d.point((row[x_row + 1] * IMAGE_HEIGHT, IMAGE_HEIGHT - 1 - row[y_row + 1] * IMAGE_HEIGHT),
                 fill=(current_color[0], intensity, current_color[2]))
+
+        if dimension_count == 2:
+            continue
 
         # blue
         current_color = out.getpixel(((row[x_row + 2] * IMAGE_HEIGHT % IMAGE_HEIGHT), IMAGE_HEIGHT - 1 - (row[y_row + 2] * IMAGE_HEIGHT) % IMAGE_HEIGHT))
@@ -160,17 +169,22 @@ for (directory, category, file) in files:
         x_row = 0
         y_row = 0
 
-        # x and ddx
         x, y = (row[x_row] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[y_row] * IMAGE_HEIGHT) % IMAGE_HEIGHT
 
         # red
         current_color = out.getpixel((x, y))
         d.point((x, y), fill=(intensity, current_color[1], current_color[2]))
 
+        if dimension_count == 1:
+            continue
+
         # green
         current_color = out.getpixel((((row[x_row + 1] * IMAGE_HEIGHT) % IMAGE_HEIGHT), ((row[y_row + 1] * IMAGE_HEIGHT)) % IMAGE_HEIGHT))
         d.point((row[x_row + 1] * IMAGE_HEIGHT, row[y_row + 1] * IMAGE_HEIGHT),
                 fill=(current_color[0], intensity, current_color[2]))
+
+        if dimension_count == 2:
+            continue
 
         # blue
         current_color = out.getpixel(((row[x_row + 2] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[y_row + 2] * IMAGE_HEIGHT) % IMAGE_HEIGHT))
@@ -179,9 +193,10 @@ for (directory, category, file) in files:
 
     out.save(f"pictures/{category}_{file}.png", "PNG")
 
+exit()
+
 im_x = []
 im_y = []
-
 
 image_paths = glob.glob("pictures/*.png")
 random.shuffle(image_paths)

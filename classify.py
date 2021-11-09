@@ -213,15 +213,17 @@ im_x = numpy.array(im_x)
 im_x = im_x.reshape([im_x.shape[0], IMAGE_WIDTH, IMAGE_HEIGHT, 3])
 
 
-x_train = im_x[:2600].astype("float32")
-x_test = im_x[2600:].astype("float32")
+x75 = int(0.75 * len(im_x))
+
+x_train = im_x[:x75].astype("float32")
+x_test = im_x[x75:].astype("float32")
 x_train /= 255
 x_test /= 255
 
 num_classes = 8
 
-y_train = keras.utils.np_utils.to_categorical(im_y[:2600], num_classes)
-y_test = keras.utils.np_utils.to_categorical(im_y[2600:], num_classes)
+y_train = keras.utils.np_utils.to_categorical(im_y[:x75], num_classes)
+y_test = keras.utils.np_utils.to_categorical(im_y[x75:], num_classes)
 
 model = Sequential()
 model.add(Conv2D(64, kernel_size=(3, 3),

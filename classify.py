@@ -15,12 +15,12 @@ from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras import optimizers
 
 
-def add_differentials(data: numpy.ndarray, differential_count: int) -> numpy.ndarray:
+def add_differentials(data: numpy.ndarray, dimension_count: int, differential_count: int) -> numpy.ndarray:
     result = data.copy()
-    filler = numpy.zeros(3)
+    filler = numpy.zeros(dimension_count)
 
     for i in range(differential_count):
-        values_to_differentiate: numpy.ndarray = result[:, -3:]
+        values_to_differentiate: numpy.ndarray = result[:, -dimension_count:]
         differentials = numpy.diff(values_to_differentiate, axis=0)
         differentials = numpy.vstack([filler, differentials])     # add missing values
         result = numpy.hstack([result, differentials])
@@ -79,8 +79,8 @@ for (directory, category, file) in files:
     X_raw = dataframe.values
     X = dataframe.values
 
-    X = add_differentials(X, 3)
-    X_raw = add_differentials(X_raw, 3)
+    X = add_differentials(X, 3, 2)
+    X_raw = add_differentials(X_raw, 3, 2)
 
     for i in range(2, len(X) - 2):
         X[i] = (X_raw[i] * 2 + X_raw[i-1] * 1 + X_raw[i+1] * 1) / 4
@@ -178,8 +178,6 @@ for (directory, category, file) in files:
                 fill=(current_color[0], current_color[1], intensity))
 
     out.save(f"pictures/{category}_{file}.png", "PNG")
-
-exit()
 
 im_x = []
 im_y = []

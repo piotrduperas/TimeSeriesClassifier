@@ -12,7 +12,7 @@ with open(sys.argv[1], 'r') as file:
         if data:
             values = line.split(',')
             category = int(values[-1])
-            values = values[:-1]
+            values = [f"{v}\n" for v in values[:-1]]
 
             Path(f"{sys.argv[3]}/train/{category}").mkdir(parents=True, exist_ok=True)
             with open(f"{sys.argv[3]}/train/{category}/{file_number}.csv", "w+") as output:
@@ -29,7 +29,7 @@ with open(sys.argv[2], 'r') as file:
         if data:
             values = line.split(',')
             category = int(values[-1])
-            values = values[:-1]
+            values = [f"{v}\n" for v in values[:-1]]
 
             Path(f"{sys.argv[3]}/test/{category}").mkdir(parents=True, exist_ok=True)
             with open(f"{sys.argv[3]}/test/{category}/{file_number}.csv", "w+") as output:

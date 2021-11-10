@@ -4,6 +4,7 @@ import keras
 import numpy
 import os
 import random
+import sys
 
 from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D, AveragePooling2D
 from keras.models import Sequential
@@ -63,8 +64,10 @@ IMAGE_WIDTH = 28
 IMAGE_HEIGHT = 28
 CATEGORY_COUNT = 8
 
-directories = ["data/test", "data/train"]
+if len(sys.argv) != 2:
+    raise SyntaxError("Usage: python3 classify.py data_directory")
 
+directories = [f"{sys.argv[1]}/test", f"{sys.argv[1]}/train"]
 files = []
 
 for directory in directories:
@@ -87,8 +90,8 @@ for (directory, category, file) in files:
         X[i] = (X_raw[i] * 2 + X_raw[i-1] * 1 + X_raw[i+1] * 1) / 4
 
     scaler = MinMaxScaler(feature_range=(0, 1))
-    xmin: float = X.min()
-    xmax: float = X.max()
+    xmin = X.min()
+    xmax = X.max()
 
     scaler.fit(generate_scaler_array(xmin, xmax, dimension_count, 2))
     scaled_X = scaler.transform(X)
@@ -106,8 +109,8 @@ for (directory, category, file) in files:
 
         intensity = 255 - i * 8 // 9
         intensity = intensity // 3
-        x_row = 6
-        y_row = 6
+        x_row = 2 * dimension_count
+        y_row = 2 * dimension_count
 
         x, y = (row[x_row] * IMAGE_HEIGHT % IMAGE_HEIGHT), mid
 
@@ -136,8 +139,8 @@ for (directory, category, file) in files:
         row = scaled_X[i]
 
         intensity = 255 - i * 8 // 9
-        x_row = 3
-        y_row = 3
+        x_row = dimension_count
+        y_row = dimension_count
 
         x, y = (row[x_row] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[y_row] * IMAGE_HEIGHT) % IMAGE_HEIGHT
 
@@ -192,8 +195,6 @@ for (directory, category, file) in files:
                 fill=(current_color[0], current_color[1], intensity))
 
     out.save(f"pictures/{category}_{file}.png", "PNG")
-
-exit()
 
 im_x = []
 im_y = []

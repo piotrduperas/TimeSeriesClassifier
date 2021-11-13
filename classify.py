@@ -62,19 +62,27 @@ def generate_scaler_array(xmin: float, xmax: float, dimension_count: int, differ
 # constants
 IMAGE_WIDTH = 28
 IMAGE_HEIGHT = 28
-CATEGORY_COUNT = 8
 
 if len(sys.argv) != 2:
     raise SyntaxError("Usage: python3 classify.py data_directory")
 
 directories = [f"{sys.argv[1]}/test", f"{sys.argv[1]}/train"]
 files = []
+category_count = len(glob.glob(path.join(directories[0], "*")))
+
+
+image_paths = glob.glob("pictures/*.png")
+for image_path in image_paths:
+    os.remove(image_path)
+
 
 for directory in directories:
-    for category in range(1, CATEGORY_COUNT + 1):
+    for category in range(1, category_count + 1):
         for (dirpath, dirnames, filenames) in os.walk(path.join(directory, str(category))):
             files.extend([(directory, str(category), filename.split('.')[0]) for filename in filenames])
             break
+
+
 
 for (directory, category, file) in files:
     dataframe = read_csv(f"{path.join(directory, category, file)}.csv", header=None)
@@ -199,7 +207,6 @@ for (directory, category, file) in files:
 im_x = []
 im_y = []
 
-image_paths = glob.glob("pictures/*.png")
 random.shuffle(image_paths)
 
 for image_path in image_paths:
@@ -221,10 +228,8 @@ x_test = im_x[x75:].astype("float32")
 x_train /= 255
 x_test /= 255
 
-num_classes = 8
-
-y_train = keras.utils.np_utils.to_categorical(im_y[:x75], num_classes)
-y_test = keras.utils.np_utils.to_categorical(im_y[x75:], num_classes)
+y_train = keras.utils.np_utils.to_categorical(im_y[:x75], category_count)
+y_test = keras.utils.np_utils.to_categorical(im_y[x75:], category_count)
 
 model = Sequential()
 model.add(Conv2D(64, kernel_size=(3, 3),
@@ -237,7 +242,7 @@ model.add(Dropout(0.25))
 model.add(Flatten())
 model.add(Dense(128, activation="relu"))
 model.add(Dropout(0.5))
-model.add(Dense(num_classes, activation="softmax"))
+model.add(Dense(category_count, activation="softmax"))
 
 model.compile(loss=keras.losses.categorical_crossentropy,
               optimizer=optimizers.Adam(),

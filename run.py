@@ -11,6 +11,6 @@ result = subprocess.run(['mkdir', 'datasets/'+datasetid], stdout=subprocess.PIPE
 result = subprocess.run(['unzip', '-o', 'datasets/'+dataset+'.zip', '-d', 'datasets/'+datasetid], stdout=subprocess.PIPE)
 print(result.stdout)
 result = subprocess.run(['python3', 'convert.py', 'datasets/'+datasetid+'/'+dataset+'_TRAIN.arff', 'datasets/'+datasetid+'/'+dataset+'_TEST.arff', 'datasets/'+datasetid+'/converted'], stdout=subprocess.PIPE)
-result = subprocess.run(['python3', 'classify.py', 'datasets/'+datasetid+'/converted'], stdout=subprocess.PIPE)
-result = subprocess.run(['python3', 'classify.py', 'datasets/'+datasetid+'/converted'], stdout=subprocess.PIPE)
+result = subprocess.run(['python3', 'generate_model.py', 'datasets/'+datasetid+'/converted'], stdout=subprocess.PIPE)
+result = subprocess.run(['python3', 'generate_model.py', 'datasets/'+datasetid+'/converted'], stdout=subprocess.PIPE)
 print(result.stdout)

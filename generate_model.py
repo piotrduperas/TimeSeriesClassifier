@@ -4,9 +4,10 @@ import keras
 import numpy
 import os
 import random
+import shutil
 import sys
 
-from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D, AveragePooling2D
+from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 from keras.models import Sequential
 from keras.utils import np_utils
 from os import path
@@ -16,16 +17,21 @@ from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras import optimizers
 from typing import Tuple, List, Union
 
-
 # constants
 IMAGE_WIDTH = 28
 IMAGE_HEIGHT = 28
 
 
 # functions
-def clean_up():
+def clean_up(model_name: str):
     for image_path in glob.glob(path.join("pictures", "*.png")):
         os.remove(image_path)
+
+    if path.exists(path.join("models", model_name)):
+        shutil.rmtree(path.join("models", model_name))
+
+    os.mkdir(path.join("models", model_name))
+    os
 
 
 def get_files(directories: List[str], category_count: int):
@@ -45,7 +51,7 @@ def add_differentials(data: numpy.ndarray, dimension_count: int, differential_co
     for i in range(differential_count):
         values_to_differentiate: numpy.ndarray = result[:, -dimension_count:]
         differentials = numpy.diff(values_to_differentiate, axis=0)
-        differentials = numpy.vstack([filler, differentials])     # add missing values
+        differentials = numpy.vstack([filler, differentials])  # add missing values
         result = numpy.hstack([result, differentials])
 
     return result
@@ -93,7 +99,7 @@ def generate_images(files: List[Tuple[str, str, any]]):
         X_raw = add_differentials(X_raw, dimension_count, 2)
 
         for i in range(2, len(X) - 2):
-            X[i] = (X_raw[i] * 2 + X_raw[i-1] * 1 + X_raw[i+1] * 1) / 4
+            X[i] = (X_raw[i] * 2 + X_raw[i - 1] * 1 + X_raw[i + 1] * 1) / 4
 
         scaler = MinMaxScaler(feature_range=(0, 1))
         xmin = X.min()
@@ -158,7 +164,8 @@ def generate_images(files: List[Tuple[str, str, any]]):
                 continue
 
             # green
-            current_color = out.getpixel((((row[x_row + 1] * IMAGE_HEIGHT) % IMAGE_HEIGHT), IMAGE_HEIGHT - 1 - ((row[y_row + 1] * IMAGE_HEIGHT)) % IMAGE_HEIGHT))
+            current_color = out.getpixel((((row[x_row + 1] * IMAGE_HEIGHT) % IMAGE_HEIGHT),
+                                          IMAGE_HEIGHT - 1 - ((row[y_row + 1] * IMAGE_HEIGHT)) % IMAGE_HEIGHT))
             d.point((row[x_row + 1] * IMAGE_HEIGHT, IMAGE_HEIGHT - 1 - row[y_row + 1] * IMAGE_HEIGHT),
                     fill=(current_color[0], intensity, current_color[2]))
 
@@ -166,7 +173,8 @@ def generate_images(files: List[Tuple[str, str, any]]):
                 continue
 
             # blue
-            current_color = out.getpixel(((row[x_row + 2] * IMAGE_HEIGHT % IMAGE_HEIGHT), IMAGE_HEIGHT - 1 - (row[y_row + 2] * IMAGE_HEIGHT) % IMAGE_HEIGHT))
+            current_color = out.getpixel(((row[x_row + 2] * IMAGE_HEIGHT % IMAGE_HEIGHT),
+                                          IMAGE_HEIGHT - 1 - (row[y_row + 2] * IMAGE_HEIGHT) % IMAGE_HEIGHT))
             d.point((row[x_row + 2] * IMAGE_HEIGHT, IMAGE_HEIGHT - 1 - row[(y_row + 2)] * IMAGE_HEIGHT),
                     fill=(current_color[0], current_color[1], intensity))
 
@@ -188,7 +196,8 @@ def generate_images(files: List[Tuple[str, str, any]]):
                 continue
 
             # green
-            current_color = out.getpixel((((row[x_row + 1] * IMAGE_HEIGHT) % IMAGE_HEIGHT), ((row[y_row + 1] * IMAGE_HEIGHT)) % IMAGE_HEIGHT))
+            current_color = out.getpixel(
+                (((row[x_row + 1] * IMAGE_HEIGHT) % IMAGE_HEIGHT), ((row[y_row + 1] * IMAGE_HEIGHT)) % IMAGE_HEIGHT))
             d.point((row[x_row + 1] * IMAGE_HEIGHT, row[y_row + 1] * IMAGE_HEIGHT),
                     fill=(current_color[0], intensity, current_color[2]))
 
@@ -196,7 +205,8 @@ def generate_images(files: List[Tuple[str, str, any]]):
                 continue
 
             # blue
-            current_color = out.getpixel(((row[x_row + 2] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[y_row + 2] * IMAGE_HEIGHT) % IMAGE_HEIGHT))
+            current_color = out.getpixel(
+                ((row[x_row + 2] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[y_row + 2] * IMAGE_HEIGHT) % IMAGE_HEIGHT))
             d.point((row[x_row + 2] * IMAGE_HEIGHT, row[(y_row + 2)] * IMAGE_HEIGHT),
                     fill=(current_color[0], current_color[1], intensity))
 
@@ -229,10 +239,16 @@ def prepare_data_for_model(image_paths: List[Union[bytes, str]]):
     y_train = keras.utils.np_utils.to_categorical(im_y[:x75], category_count)
     y_test = keras.utils.np_utils.to_categorical(im_y[x75:], category_count)
 
-    return x_train, y_train, x_test, y_test
+    data = dict()
+    data["x_train"] = x_train.tolist()
+    data["y_train"] = y_train.tolist()
+    data["x_test"] = x_test.tolist()
+    data["y_test"] = y_test.tolist()
+
+    return data
 
 
-def generate_model(x_train, y_train, x_test, y_test):
+def generate_trained_model(x_train, y_train, x_test, y_test):
     model = Sequential()
     model.add(Conv2D(64, kernel_size=(3, 3),
                      activation="relu",
@@ -259,10 +275,10 @@ def generate_model(x_train, y_train, x_test, y_test):
     return model
 
 
-if len(sys.argv) != 2:
-    raise SyntaxError("Usage: python3 generate_model.py data_directory")
+if len(sys.argv) != 3:
+    raise SyntaxError("Usage: python3 generate_model.py data_directory model_name")
 
-clean_up()
+clean_up(sys.argv[2])
 
 directories = [f"{sys.argv[1]}/test", f"{sys.argv[1]}/train"]
 category_count = len(glob.glob(path.join(directories[0], "*")))
@@ -270,9 +286,9 @@ files = get_files(directories, category_count)
 
 generate_images(files)
 
-x_train, y_train, x_test, y_test = prepare_data_for_model(glob.glob(path.join("pictures", "*.png")))
-model = generate_model(x_train, y_train, x_test, y_test)
+model_data = prepare_data_for_model(glob.glob(path.join("pictures", "*.png")))
+model = generate_trained_model(model_data["x_train"], model_data["y_train"], model_data["x_test"], model_data["y_test"])
 
-score = model.evaluate(x_test, y_test, verbose=0)
-print("Test loss:", score[0])
-print("Test accuracy:", score[1])
+model.save(path.join("models", sys.argv[2], "model"))
+with open(path.join("models", sys.argv[2], "model_data"), "w") as file:
+    file.write(str(model_data))

@@ -8,7 +8,7 @@ with open("comparison.csv") as fp:
 
 for i in range(1, 6):
     for d in data_read[1:]:
-        result = subprocess.run(['python3', 'run.py', d[0]],stdout=subprocess.PIPE)
+        result = subprocess.run(['python3', 'run.py', d[0]], stdout=subprocess.PIPE)
         # Read all from result stdout
         try:
             acc = str(result.stdout.decode('utf-8')).split('Test accuracy: ')[1].split('\\n')[0]

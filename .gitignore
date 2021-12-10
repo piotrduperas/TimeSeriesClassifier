@@ -130,3 +130,7 @@ dmypy.json
 
 # JB IDEs
 .idea/
+
+models
+pictures
+datasets

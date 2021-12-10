@@ -1,4 +1,5 @@
 import glob
+
 import imageio
 import keras
 import numpy
@@ -7,7 +8,9 @@ import random
 import shutil
 import sys
 
+from keras.callbacks import EarlyStopping
 from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
+from keras.losses import categorical_crossentropy
 from keras.models import Sequential
 from keras.utils import np_utils
 from os import path
@@ -18,11 +21,15 @@ from tensorflow.keras import optimizers
 from typing import Tuple, List, Union
 
 # constants
-IMAGE_WIDTH = 28
-IMAGE_HEIGHT = 28
+IMAGE_WIDTH = 32
+IMAGE_HEIGHT = 32
 
 
 # functions
+def cap(value: int, min_value: int, max_value: int) -> int:
+    return min(max_value, max(min_value, value))
+
+
 def clean_up(model_name: str):
     for image_path in glob.glob(path.join("pictures", "*.png")):
         os.remove(image_path)
@@ -31,10 +38,9 @@ def clean_up(model_name: str):
         shutil.rmtree(path.join("models", model_name))
 
     os.mkdir(path.join("models", model_name))
-    os
 
 
-def get_files(directories: List[str], category_count: int):
+def get_files(directories: List[str], category_count: int) -> List[Tuple[str, str, str]]:
     files = []
     for directory in directories:
         for category in range(1, category_count + 1):
@@ -87,7 +93,63 @@ def generate_scaler_array(xmin: float, xmax: float, dimension_count: int, differ
     return array
 
 
-def generate_images(files: List[Tuple[str, str, any]]):
+def group_data(data: numpy.ndarray) -> numpy.ndarray:
+    row_count = len(data)
+    counter_column = numpy.array(
+        [[round(x / row_count * IMAGE_WIDTH) for x in range(row_count)]]
+    ).transpose()
+    grouped_data = numpy.hstack([data, counter_column])
+
+    result: numpy.ndarray = numpy.empty([0, data.shape[1]])
+    for i in range(IMAGE_WIDTH):
+        group = numpy.array(grouped_data[grouped_data[:, -1] == i])[:, :-1]
+        if len(group) > 0:
+            result = numpy.vstack([result, numpy.average(group, axis=0)])
+
+    return result
+
+
+def draw_first_dimension(draw: ImageDraw, data: numpy.ndarray, dimension_count: int) -> None:
+    row_count = len(data)
+    for i in range(row_count):
+        row = data[i]
+
+        red = cap(round(row[0] * 255), 0, 255)
+        green = cap(round(row[dimension_count] * 255), 0, 255)
+        blue = cap(round(row[2 * dimension_count] * 255), 0, 255)
+
+        draw.point((i, i), (red, green, blue))
+
+
+def draw_second_dimension(draw: ImageDraw, data: numpy.ndarray, dimension_count: int) -> None:
+    row_count = len(data)
+    for i in range(row_count):
+        row = data[i]
+
+        red = cap(round(row[1] * 255), 0, 255)
+        green = cap(round(row[1 + dimension_count] * 255), 0, 255)
+        blue = cap(round(row[1 + 2 * dimension_count] * 255), 0, 255)
+
+        draw.point((i, IMAGE_HEIGHT - i - 1), (red, green, blue))
+
+
+def draw_nth_dimension(draw: ImageDraw, data: numpy.ndarray, dimension_count: int, dimension_number: int) -> None:
+    y = round(IMAGE_HEIGHT / (dimension_count - 1) * (dimension_number - 2))
+    row_count = len(data)
+    for i in range(row_count):
+        row = data[i]
+
+        red = cap(round(row[dimension_number - 1] * 255), 0, 255)
+        green = cap(round(row[dimension_number - 1 + dimension_count] * 255), 0, 255)
+        blue = cap(round(row[dimension_number - 1 + 2 * dimension_count] * 255), 0, 255)
+
+        draw.point((i, y), (red, green, blue))
+
+
+def generate_images(files: List[Tuple[str, str, str]]):
+    directory: str
+    category: str
+    file: str
     for (directory, category, file) in files:
         dataframe = read_csv(f"{path.join(directory, category, file)}.csv", header=None)
         dimension_count = dataframe.shape[1]
@@ -106,111 +168,19 @@ def generate_images(files: List[Tuple[str, str, any]]):
         xmax = X.max()
 
         scaler.fit(generate_scaler_array(xmin, xmax, dimension_count, 2))
-        scaled_X = scaler.transform(X)
+        scaled_X: numpy.ndarray = scaler.transform(X)
+        grouped_X = group_data(scaled_X)
 
         out = Image.new("RGB", (IMAGE_WIDTH, IMAGE_HEIGHT), (0, 0, 0))
+        draw = ImageDraw.Draw(out)
 
-        # get a drawing context
-        d = ImageDraw.Draw(out)
+        if dimension_count > 1:
+            for i in range(3, dimension_count + 1):
+                draw_nth_dimension(draw, grouped_X, dimension_count, i)
+            draw_second_dimension(draw, grouped_X, dimension_count)
+        draw_first_dimension(draw, grouped_X, dimension_count)
 
-        mid = IMAGE_HEIGHT // 2 - 1
-
-        for ii in range(0, len(scaled_X)):
-            i = len(scaled_X) - 1 - ii
-            row = scaled_X[i]
-
-            intensity = 255 - i * 8 // 9
-            intensity = intensity // 3
-            x_row = 2 * dimension_count
-            y_row = 2 * dimension_count
-
-            x, y = (row[x_row] * IMAGE_HEIGHT % IMAGE_HEIGHT), mid
-
-            # red
-            current_color = out.getpixel((x, mid))
-            d.point((x, mid), fill=(intensity, current_color[1], current_color[2]))
-
-            if dimension_count == 1:
-                continue
-
-            # green
-            current_color = out.getpixel((((row[x_row + 1] * IMAGE_HEIGHT) % IMAGE_HEIGHT), mid))
-            d.point((row[x_row + 1] * IMAGE_HEIGHT, mid),
-                    fill=(current_color[0], intensity, current_color[2]))
-
-            if dimension_count == 2:
-                continue
-
-            # blue
-            current_color = out.getpixel(((row[x_row + 2] * IMAGE_HEIGHT % IMAGE_HEIGHT), mid))
-            d.point((row[x_row + 2] * IMAGE_HEIGHT, mid),
-                    fill=(current_color[0], current_color[1], intensity))
-
-        for ii in range(0, len(scaled_X)):
-            i = len(scaled_X) - 1 - ii
-            row = scaled_X[i]
-
-            intensity = 255 - i * 8 // 9
-            x_row = dimension_count
-            y_row = dimension_count
-
-            x, y = (row[x_row] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[y_row] * IMAGE_HEIGHT) % IMAGE_HEIGHT
-
-            # red
-            current_color = out.getpixel((x, IMAGE_HEIGHT - 1 - y))
-            d.point((x, IMAGE_HEIGHT - 1 - y), fill=(intensity, current_color[1], current_color[2]))
-
-            if dimension_count == 1:
-                continue
-
-            # green
-            current_color = out.getpixel((((row[x_row + 1] * IMAGE_HEIGHT) % IMAGE_HEIGHT),
-                                          IMAGE_HEIGHT - 1 - ((row[y_row + 1] * IMAGE_HEIGHT)) % IMAGE_HEIGHT))
-            d.point((row[x_row + 1] * IMAGE_HEIGHT, IMAGE_HEIGHT - 1 - row[y_row + 1] * IMAGE_HEIGHT),
-                    fill=(current_color[0], intensity, current_color[2]))
-
-            if dimension_count == 2:
-                continue
-
-            # blue
-            current_color = out.getpixel(((row[x_row + 2] * IMAGE_HEIGHT % IMAGE_HEIGHT),
-                                          IMAGE_HEIGHT - 1 - (row[y_row + 2] * IMAGE_HEIGHT) % IMAGE_HEIGHT))
-            d.point((row[x_row + 2] * IMAGE_HEIGHT, IMAGE_HEIGHT - 1 - row[(y_row + 2)] * IMAGE_HEIGHT),
-                    fill=(current_color[0], current_color[1], intensity))
-
-        for ii in range(0, len(scaled_X)):
-            i = len(scaled_X) - 1 - ii
-            row = scaled_X[i]
-
-            intensity = 255 - i * 8 // 9
-            x_row = 0
-            y_row = 0
-
-            x, y = (row[x_row] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[y_row] * IMAGE_HEIGHT) % IMAGE_HEIGHT
-
-            # red
-            current_color = out.getpixel((x, y))
-            d.point((x, y), fill=(intensity, current_color[1], current_color[2]))
-
-            if dimension_count == 1:
-                continue
-
-            # green
-            current_color = out.getpixel(
-                (((row[x_row + 1] * IMAGE_HEIGHT) % IMAGE_HEIGHT), ((row[y_row + 1] * IMAGE_HEIGHT)) % IMAGE_HEIGHT))
-            d.point((row[x_row + 1] * IMAGE_HEIGHT, row[y_row + 1] * IMAGE_HEIGHT),
-                    fill=(current_color[0], intensity, current_color[2]))
-
-            if dimension_count == 2:
-                continue
-
-            # blue
-            current_color = out.getpixel(
-                ((row[x_row + 2] * IMAGE_HEIGHT % IMAGE_HEIGHT), (row[y_row + 2] * IMAGE_HEIGHT) % IMAGE_HEIGHT))
-            d.point((row[x_row + 2] * IMAGE_HEIGHT, row[(y_row + 2)] * IMAGE_HEIGHT),
-                    fill=(current_color[0], current_color[1], intensity))
-
-        out.save(f"pictures/{category}_{file}.png", "PNG")
+        out.save(f"pictures/{path.split(directory)[-1]}_{category}_{file}.png", "PNG")
 
 
 def prepare_data_for_model(image_paths: List[Union[bytes, str]]):
@@ -222,7 +192,7 @@ def prepare_data_for_model(image_paths: List[Union[bytes, str]]):
     for image_path in image_paths:
         im = imageio.imread(image_path)
         image_name = path.split(image_path)[-1].split('.')[0]
-        image_category = image_name.split('_')[0]
+        image_category = image_name.split('_')[1]
         im_x.append(im[:, :])
         im_y.append(int(image_category) - 1)
 
@@ -244,6 +214,7 @@ def prepare_data_for_model(image_paths: List[Union[bytes, str]]):
     data["y_train"] = y_train.tolist()
     data["x_test"] = x_test.tolist()
     data["y_test"] = y_test.tolist()
+    data["test_images"] = image_paths[x75:]
 
     return data
 
@@ -262,25 +233,28 @@ def generate_trained_model(x_train, y_train, x_test, y_test):
     model.add(Dropout(0.5))
     model.add(Dense(category_count, activation="softmax"))
 
-    model.compile(loss=keras.losses.categorical_crossentropy,
+    model.compile(loss=categorical_crossentropy,
                   optimizer=optimizers.Adam(),
                   metrics=["accuracy"])
+
+    callback = EarlyStopping(monitor="val_loss", patience=4)
 
     model.fit(x_train, y_train,
               batch_size=64,
               epochs=64,
               verbose=1,
-              validation_data=(x_test, y_test))
+              validation_data=(x_test, y_test),
+              callbacks=[callback])
 
     return model
 
 
-if len(sys.argv) != 3:
-    raise SyntaxError("Usage: python3 generate_model.py data_directory model_name")
+if len(sys.argv) != 2:
+    raise SyntaxError("Usage: python3 generate_model.py model_name")
 
-clean_up(sys.argv[2])
+clean_up(sys.argv[1])
 
-directories = [f"{sys.argv[1]}/test", f"{sys.argv[1]}/train"]
+directories = [path.join("data", sys.argv[1], "test"), path.join("data", sys.argv[1], "train")]
 category_count = len(glob.glob(path.join(directories[0], "*")))
 files = get_files(directories, category_count)
 
@@ -289,6 +263,6 @@ generate_images(files)
 model_data = prepare_data_for_model(glob.glob(path.join("pictures", "*.png")))
 model = generate_trained_model(model_data["x_train"], model_data["y_train"], model_data["x_test"], model_data["y_test"])
 
-model.save(path.join("models", sys.argv[2], "model"))
-with open(path.join("models", sys.argv[2], "model_data"), "w") as file:
-    file.write(str(model_data))
+model.save(path.join("models", sys.argv[1], "model"))
+with open(path.join("models", sys.argv[1], "test_data"), "w") as file:
+    file.write(str({"category_count": category_count, "test_images": model_data["test_images"]}))

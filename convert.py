@@ -1,46 +1,52 @@
+import math
+from typing import Tuple
+
 import numpy
+import shutil
 import sys
 
+from os import path
 from pathlib import Path
+from scipy.io import arff
 
-if len(sys.argv) != 5:
-    raise SyntaxError("Usage: python3 convert.py train_file.arff test_file.arff dimension_count output_dir_name")
 
-dimension_count = int(sys.argv[3])
+def load_and_save(input_file: str, output_dir: str) -> None:
+    data, metadata = arff.loadarff(input_file)
+    categories: Tuple[any] = metadata._attributes[list(metadata._attributes.keys())[-1]].values
 
-with open(sys.argv[1], 'r', encoding="UTF8") as file:
-    data = False
     file_number = 1
-    for line in file:
-        if data:
-            values = line.split(',')
-            category = int(values[-1])
-            values = numpy.reshape([f"{v}\n" for v in values[:-1]], [(len(values) - 1) // dimension_count, dimension_count])
-            values_joined = [','.join(x) for x in values]
+    if isinstance(data[0][0], numpy.floating):
+        for inputs in data:
+            category = categories.index(inputs[-1].decode("utf-8")) + 1
+            values = numpy.array([0 if math.isnan(y) else y for y in numpy.array([x for x in inputs]).astype("float64")[:-1]]).transpose()
+            values_joined = '\n'.join([str(x) for x in values])
 
-            Path(f"{sys.argv[4]}/train/{category}").mkdir(parents=True, exist_ok=True)
-            with open(f"{sys.argv[4]}/train/{category}/{file_number}.csv", "w+") as output:
+            Path(path.join(output_dir, str(category))).mkdir(parents=True, exist_ok=True)
+            with open(path.join(output_dir, str(category), f"{file_number}.csv"), "w+") as output:
                 output.writelines(values_joined)
 
             file_number += 1
-        elif line == "@data\n":
-            data = True
+    else:
+        for inputs in data:
+            category = categories.index(inputs[-1].decode("utf-8")) + 1
+            values = numpy.vstack([numpy.array([0 if math.isnan(y) else y for y in x]) for x in inputs[0]]).transpose()
+            values_joined = [f"{','.join([str(y) for y in x])}\n" for x in values]
 
-with open(sys.argv[2], 'r', encoding="UTF8") as file:
-    data = False
-    file_number = 1
-    for line in file:
-        if data:
-            values = line.split(',')
-            category = int(values[-1])
-            values = numpy.reshape([f"{v}\n" for v in values[:-1]], [(len(values) - 1) // dimension_count, dimension_count])
-            values_joined = [','.join(x) for x in values]
-
-            Path(f"{sys.argv[4]}/test/{category}").mkdir(parents=True, exist_ok=True)
-            with open(f"{sys.argv[4]}/test/{category}/{file_number}.csv", "w+") as output:
+            Path(path.join(output_dir, str(category))).mkdir(parents=True, exist_ok=True)
+            with open(path.join(output_dir, str(category), f"{file_number}.csv"), "w+") as output:
                 output.writelines(values_joined)
 
             file_number += 1
-        elif line == "@data\n":
-            data = True
+
+
+if len(sys.argv) != 2:
+    raise SyntaxError("Usage: python3 convert.py model_name")
+
+model_name = sys.argv[1]
+
+if path.exists(path.join("data", model_name)):
+    shutil.rmtree(path.join("data", model_name))
+
+load_and_save(path.join("datasets", model_name, f"{model_name}_TRAIN.arff"), path.join("data", model_name, "train"))
+load_and_save(path.join("datasets", model_name, f"{model_name}_TEST.arff"), path.join("data", model_name, "test"))
 

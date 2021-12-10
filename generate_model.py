@@ -1,5 +1,4 @@
 import glob
-import math
 
 import imageio
 import keras
@@ -41,7 +40,7 @@ def clean_up(model_name: str):
     os.mkdir(path.join("models", model_name))
 
 
-def get_files(directories: List[str], category_count: int):
+def get_files(directories: List[str], category_count: int) -> List[Tuple[str, str, str]]:
     files = []
     for directory in directories:
         for category in range(1, category_count + 1):
@@ -97,15 +96,15 @@ def generate_scaler_array(xmin: float, xmax: float, dimension_count: int, differ
 def group_data(data: numpy.ndarray) -> numpy.ndarray:
     row_count = len(data)
     counter_column = numpy.array(
-        [[math.floor(x / row_count * IMAGE_WIDTH) for x in range(row_count)]]
+        [[round(x / row_count * IMAGE_WIDTH) for x in range(row_count)]]
     ).transpose()
     grouped_data = numpy.hstack([data, counter_column])
 
     result: numpy.ndarray = numpy.empty([0, data.shape[1]])
     for i in range(IMAGE_WIDTH):
         group = numpy.array(grouped_data[grouped_data[:, -1] == i])[:, :-1]
-        dupa = numpy.average(group, axis=0)
-        result = numpy.vstack([result, numpy.average(group, axis=0)])
+        if len(group) > 0:
+            result = numpy.vstack([result, numpy.average(group, axis=0)])
 
     return result
 
@@ -135,7 +134,7 @@ def draw_second_dimension(draw: ImageDraw, data: numpy.ndarray, dimension_count:
 
 
 def draw_nth_dimension(draw: ImageDraw, data: numpy.ndarray, dimension_count: int, dimension_number: int) -> None:
-    y = round(IMAGE_HEIGHT / (dimension_count - 1))
+    y = round(IMAGE_HEIGHT / (dimension_count - 1) * (dimension_number - 2))
     row_count = len(data)
     for i in range(row_count):
         row = data[i]
@@ -147,7 +146,10 @@ def draw_nth_dimension(draw: ImageDraw, data: numpy.ndarray, dimension_count: in
         draw.point((i, y), (red, green, blue))
 
 
-def generate_images(files: List[Tuple[str, str, any]]):
+def generate_images(files: List[Tuple[str, str, str]]):
+    directory: str
+    category: str
+    file: str
     for (directory, category, file) in files:
         dataframe = read_csv(f"{path.join(directory, category, file)}.csv", header=None)
         dimension_count = dataframe.shape[1]
@@ -172,13 +174,13 @@ def generate_images(files: List[Tuple[str, str, any]]):
         out = Image.new("RGB", (IMAGE_WIDTH, IMAGE_HEIGHT), (0, 0, 0))
         draw = ImageDraw.Draw(out)
 
-        draw_first_dimension(draw, grouped_X, dimension_count)
         if dimension_count > 1:
-            draw_second_dimension(draw, grouped_X, dimension_count)
             for i in range(3, dimension_count + 1):
                 draw_nth_dimension(draw, grouped_X, dimension_count, i)
+            draw_second_dimension(draw, grouped_X, dimension_count)
+        draw_first_dimension(draw, grouped_X, dimension_count)
 
-        out.save(f"pictures/{category}_{file}.png", "PNG")
+        out.save(f"pictures/{path.split(directory)[-1]}_{category}_{file}.png", "PNG")
 
 
 def prepare_data_for_model(image_paths: List[Union[bytes, str]]):
@@ -190,7 +192,7 @@ def prepare_data_for_model(image_paths: List[Union[bytes, str]]):
     for image_path in image_paths:
         im = imageio.imread(image_path)
         image_name = path.split(image_path)[-1].split('.')[0]
-        image_category = image_name.split('_')[0]
+        image_category = image_name.split('_')[1]
         im_x.append(im[:, :])
         im_y.append(int(image_category) - 1)
 
@@ -235,7 +237,7 @@ def generate_trained_model(x_train, y_train, x_test, y_test):
                   optimizer=optimizers.Adam(),
                   metrics=["accuracy"])
 
-    callback = EarlyStopping(monitor="val_loss", patience=5)
+    callback = EarlyStopping(monitor="val_loss", patience=4)
 
     model.fit(x_train, y_train,
               batch_size=64,
@@ -247,12 +249,12 @@ def generate_trained_model(x_train, y_train, x_test, y_test):
     return model
 
 
-if len(sys.argv) != 3:
-    raise SyntaxError("Usage: python3 generate_model.py data_directory model_name")
+if len(sys.argv) != 2:
+    raise SyntaxError("Usage: python3 generate_model.py model_name")
 
-clean_up(sys.argv[2])
+clean_up(sys.argv[1])
 
-directories = [f"{sys.argv[1]}/test", f"{sys.argv[1]}/train"]
+directories = [path.join("data", sys.argv[1], "test"), path.join("data", sys.argv[1], "train")]
 category_count = len(glob.glob(path.join(directories[0], "*")))
 files = get_files(directories, category_count)
 
@@ -261,6 +263,6 @@ generate_images(files)
 model_data = prepare_data_for_model(glob.glob(path.join("pictures", "*.png")))
 model = generate_trained_model(model_data["x_train"], model_data["y_train"], model_data["x_test"], model_data["y_test"])
 
-model.save(path.join("models", sys.argv[2], "model"))
-with open(path.join("models", sys.argv[2], "test_data"), "w") as file:
+model.save(path.join("models", sys.argv[1], "model"))
+with open(path.join("models", sys.argv[1], "test_data"), "w") as file:
     file.write(str({"category_count": category_count, "test_images": model_data["test_images"]}))

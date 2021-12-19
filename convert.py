@@ -18,7 +18,7 @@ def load_and_save(input_file: str, output_dir: str) -> None:
     if isinstance(data[0][0], numpy.floating):
         for inputs in data:
             category = categories.index(inputs[-1].decode("utf-8")) + 1
-            values = numpy.array([0 if math.isnan(y) else y for y in numpy.array([x for x in inputs]).astype("float64")[:-1]]).transpose()
+            values = numpy.array([0 if math.isnan(y) else y for y in numpy.array([x for x in inputs][:-1]).astype("float64")]).transpose()
             values_joined = '\n'.join([str(x) for x in values])
 
             Path(path.join(output_dir, str(category))).mkdir(parents=True, exist_ok=True)

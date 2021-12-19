@@ -9,13 +9,13 @@ result = subprocess.run(
     stdout=subprocess.PIPE)
 print(result.stdout)
 
-subprocess.run(['mkdir', f'datasets/{datasetid}'], stdout=subprocess.PIPE)
-result = subprocess.run(['unzip', '-o', f'datasets/{dataset}.zip', '-d', f'datasets/{datasetid}'], stdout=subprocess.PIPE)
+subprocess.run(['mkdir', f'datasets/{dataset}'], stdout=subprocess.PIPE)
+result = subprocess.run(['unzip', '-o', f'datasets/{dataset}.zip', '-d', f'datasets/{dataset}'], stdout=subprocess.PIPE)
 print(result.stdout)
 
-subprocess.run(['python3', 'convert.py', datasetid], stdout=subprocess.PIPE)
-result = subprocess.run(['python3', 'generate_model.py', datasetid], stdout=subprocess.PIPE)
+subprocess.run(['python3', 'convert.py', dataset], stdout=subprocess.PIPE)
+result = subprocess.run(['python3', 'generate_model.py', dataset], stdout=subprocess.PIPE)
 print(result.stdout)
 
-result = subprocess.run(['python3', 'classify.py', datasetid])
+result = subprocess.run(['python3', 'classify.py', dataset])
 print(result.stdout)

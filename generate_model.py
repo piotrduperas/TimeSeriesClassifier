@@ -95,12 +95,12 @@ def generate_scaler_array(xmin: float, xmax: float, dimension_count: int, differ
 def group_data(data: numpy.ndarray) -> numpy.ndarray:
     row_count = len(data)
     counter_column = numpy.array(
-        [[round(x / row_count * IMAGE_WIDTH) for x in range(row_count)]]
+        [[round(x / row_count * 360) for x in range(row_count)]]
     ).transpose()
     grouped_data = numpy.hstack([data, counter_column])
 
     result: numpy.ndarray = numpy.empty([0, data.shape[1]])
-    for i in range(IMAGE_WIDTH):
+    for i in range(360):
         group = numpy.array(grouped_data[grouped_data[:, -1] == i])[:, :-1]
         if len(group) > 0:
             result = numpy.vstack([result, numpy.average(group, axis=0)])

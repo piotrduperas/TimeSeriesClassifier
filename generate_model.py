@@ -93,14 +93,14 @@ def generate_scaler_array(xmin: float, xmax: float, dimension_count: int, differ
 
 
 def group_data(data: numpy.ndarray) -> numpy.ndarray:
-    row_count = len(data)
+    row_count, col_count = data.shape
     counter_column = numpy.array(
-        [[round(x / row_count * 360) for x in range(row_count)]]
+        [[round(x / row_count * min(360, row_count // col_count)) for x in range(row_count)]]
     ).transpose()
     grouped_data = numpy.hstack([data, counter_column])
 
     result: numpy.ndarray = numpy.empty([0, data.shape[1]])
-    for i in range(360):
+    for i in range(min(360, row_count // col_count)):
         group = numpy.array(grouped_data[grouped_data[:, -1] == i])[:, :-1]
         if len(group) > 0:
             result = numpy.vstack([result, numpy.average(group, axis=0)])
@@ -177,8 +177,6 @@ def prepare_data_for_model(image_paths: List[Union[bytes, str]]):
     im_x = im_x.reshape([im_x.shape[0], IMAGE_WIDTH, IMAGE_HEIGHT, 3])
 
     x75 = len([p for p in image_paths if "train" in p])
-
-    print(x75)
 
     x_train = im_x[:x75].astype("float32")
     x_test = im_x[x75:].astype("float32")

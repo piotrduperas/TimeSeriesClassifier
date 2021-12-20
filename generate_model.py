@@ -121,7 +121,7 @@ def draw_dimension(draw: ImageDraw, data: numpy.ndarray, dimension_count: int, d
         green = cap(round(row[dimension_number - 1 + dimension_count] * 255), 0, 255)
         blue = cap(round(row[dimension_number - 1 + 2 * dimension_count] * 255), 0, 255)
 
-        draw.pieslice((-IMAGE_WIDTH, -IMAGE_WIDTH, 2*IMAGE_WIDTH, 2*IMAGE_HEIGHT), start_angle + (i / row_count * d), start_angle + ((i + 1) / row_count * d), fill=(red, green, blue))
+        draw.pieslice((0, 0, IMAGE_WIDTH - 1, IMAGE_HEIGHT - 1), start_angle + (i / row_count * d), start_angle + ((i + 1) / row_count * d), fill=(red, green, blue))
 
 
 def generate_images(files: List[Tuple[str, str, str]]):
@@ -154,6 +154,8 @@ def generate_images(files: List[Tuple[str, str, str]]):
 
         for i in range(1, dimension_count + 1):
             draw_dimension(draw, grouped_X, dimension_count, i)
+
+        draw.pieslice((2, 2, IMAGE_WIDTH - 3, IMAGE_HEIGHT - 3), 0, 360, fill=(0, 0, 0))
 
         out.save(f"pictures/{path.split(directory)[-1]}_{category}_{file}.png", "PNG")
 

@@ -17,10 +17,7 @@ ok = False
  
 for i in data:
     dataset = i['Dataset']
-    if dataset == "UMD":
-        ok = True
-    if not ok:
-        continue
+
     result = subprocess.run(['python3', 'run.py', dataset], stdout=subprocess.PIPE)
     # Read all from result stdout
     try:

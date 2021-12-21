@@ -6,7 +6,7 @@ with open("comparison.csv") as fp:
     # next(reader, None)  # skip the headers
     data_read = [row for row in reader]
 
-f = open('results_p1.json')
+f = open('results.json')
  
 results = json.load(f)
 

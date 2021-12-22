@@ -42,6 +42,8 @@ def load_and_save(input_file: str, output_dir: str) -> None:
 if len(sys.argv) != 2:
     raise SyntaxError("Usage: python3 convert.py model_name")
 
+print("Converting...")
+
 model_name = sys.argv[1]
 
 if path.exists(path.join("data", model_name)):

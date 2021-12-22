@@ -153,7 +153,7 @@ def generate_images(files: List[Tuple[str, str, str]]):
         for i in range(1, dimension_count + 1):
             draw_nth_dimension(draw, grouped_X, dimension_count, i)
 
-        out.save(f"pictures/{path.split(directory)[-1]}_{category}_{file}.png", "PNG")
+        out.save(path.join("pictures", f"{path.split(directory)[-1]}_{category}_{file}.png"), "PNG")
 
 
 def prepare_data_for_model(image_paths: List[Union[bytes, str]]):
@@ -173,8 +173,6 @@ def prepare_data_for_model(image_paths: List[Union[bytes, str]]):
     im_x = im_x.reshape([im_x.shape[0], IMAGE_WIDTH, IMAGE_HEIGHT, 3])
 
     train_set_size = len([p for p in image_paths if "train" in p])
-
-    print(train_set_size)
 
     x_train = im_x[:train_set_size].astype("float32")
     x_test = im_x[train_set_size:].astype("float32")
@@ -227,6 +225,8 @@ def generate_trained_model(x_train, y_train, x_test, y_test):
 if len(sys.argv) != 2:
     raise SyntaxError("Usage: python3 generate_model.py model_name")
 
+print("Generating images...")
+
 clean_up(sys.argv[1])
 
 directories = [path.join("data", sys.argv[1], "test"), path.join("data", sys.argv[1], "train")]
@@ -234,6 +234,8 @@ category_count = len(glob.glob(path.join(directories[0], "*")))
 files = get_files(directories, category_count)
 
 generate_images(files)
+
+print("Training model...")
 
 model_data = prepare_data_for_model(glob.glob(path.join("pictures", "*.png")))
 model = generate_trained_model(model_data["x_train"], model_data["y_train"], model_data["x_test"], model_data["y_test"])

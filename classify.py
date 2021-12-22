@@ -9,14 +9,11 @@ from PIL import Image
 from os import path
 from typing import List
 
-# constants
-
-IMAGE_WIDTH = 28
-IMAGE_HEIGHT = 28
-
 
 if len(sys.argv) != 2:
     raise SyntaxError("Usage: python3 classify.py model_name")
+
+print("Classifying...")
 
 model = keras.models.load_model(path.join("models", sys.argv[1], "model"))
 with open(path.join("models", sys.argv[1], "test_data")) as file:

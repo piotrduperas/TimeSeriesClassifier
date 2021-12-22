@@ -4,7 +4,6 @@ import imageio
 import keras
 import numpy
 import os
-import random
 import shutil
 import sys
 
@@ -12,7 +11,6 @@ from keras.callbacks import EarlyStopping
 from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 from keras.losses import categorical_crossentropy
 from keras.models import Sequential
-from keras.utils import np_utils
 from os import path
 from pandas import read_csv
 from PIL import Image, ImageDraw
@@ -21,8 +19,8 @@ from tensorflow.keras import optimizers
 from typing import Tuple, List, Union
 
 # constants
-IMAGE_WIDTH = 32
-IMAGE_HEIGHT = 32
+IMAGE_WIDTH = 48
+IMAGE_HEIGHT = 48
 
 
 # functions
@@ -108,34 +106,12 @@ def group_data(data: numpy.ndarray) -> numpy.ndarray:
 
     return result
 
-
-def draw_first_dimension(draw: ImageDraw, data: numpy.ndarray, dimension_count: int) -> None:
-    row_count = len(data)
-    for i in range(row_count):
-        row = data[i]
-
-        red = cap(round(row[0] * 255), 0, 255)
-        green = cap(round(row[dimension_count] * 255), 0, 255)
-        blue = cap(round(row[2 * dimension_count] * 255), 0, 255)
-
-        draw.point((i, i), (red, green, blue))
-
-
-def draw_second_dimension(draw: ImageDraw, data: numpy.ndarray, dimension_count: int) -> None:
-    row_count = len(data)
-    for i in range(row_count):
-        row = data[i]
-
-        red = cap(round(row[1] * 255), 0, 255)
-        green = cap(round(row[1 + dimension_count] * 255), 0, 255)
-        blue = cap(round(row[1 + 2 * dimension_count] * 255), 0, 255)
-
-        draw.point((i, IMAGE_HEIGHT - i - 1), (red, green, blue))
-
-
 def draw_nth_dimension(draw: ImageDraw, data: numpy.ndarray, dimension_count: int, dimension_number: int) -> None:
-    y = round(IMAGE_HEIGHT / (dimension_count - 1) * (dimension_number - 2))
     row_count = len(data)
+    start_angle = (dimension_number - 1) / dimension_count * 360
+    end_angle = dimension_number / dimension_count * 360
+    d = end_angle - start_angle
+
     for i in range(row_count):
         row = data[i]
 
@@ -143,7 +119,7 @@ def draw_nth_dimension(draw: ImageDraw, data: numpy.ndarray, dimension_count: in
         green = cap(round(row[dimension_number - 1 + dimension_count] * 255), 0, 255)
         blue = cap(round(row[dimension_number - 1 + 2 * dimension_count] * 255), 0, 255)
 
-        draw.point((i, y), (red, green, blue))
+        draw.pieslice((-IMAGE_WIDTH, -IMAGE_WIDTH, 2*IMAGE_WIDTH, 2*IMAGE_HEIGHT), start_angle + (i / row_count * d), start_angle + ((i + 1) / row_count * d), fill=(red, green, blue))
 
 
 def generate_images(files: List[Tuple[str, str, str]]):
@@ -174,11 +150,8 @@ def generate_images(files: List[Tuple[str, str, str]]):
         out = Image.new("RGB", (IMAGE_WIDTH, IMAGE_HEIGHT), (0, 0, 0))
         draw = ImageDraw.Draw(out)
 
-        if dimension_count > 1:
-            for i in range(3, dimension_count + 1):
-                draw_nth_dimension(draw, grouped_X, dimension_count, i)
-            draw_second_dimension(draw, grouped_X, dimension_count)
-        draw_first_dimension(draw, grouped_X, dimension_count)
+        for i in range(1, dimension_count + 1):
+            draw_nth_dimension(draw, grouped_X, dimension_count, i)
 
         out.save(f"pictures/{path.split(directory)[-1]}_{category}_{file}.png", "PNG")
 
@@ -187,7 +160,7 @@ def prepare_data_for_model(image_paths: List[Union[bytes, str]]):
     im_x = []
     im_y = []
 
-    random.shuffle(image_paths)
+    image_paths.sort(reverse=True)
 
     for image_path in image_paths:
         im = imageio.imread(image_path)
@@ -199,45 +172,47 @@ def prepare_data_for_model(image_paths: List[Union[bytes, str]]):
     im_x = numpy.array(im_x)
     im_x = im_x.reshape([im_x.shape[0], IMAGE_WIDTH, IMAGE_HEIGHT, 3])
 
-    x75 = int(0.75 * len(im_x))
+    train_set_size = len([p for p in image_paths if "train" in p])
 
-    x_train = im_x[:x75].astype("float32")
-    x_test = im_x[x75:].astype("float32")
+    print(train_set_size)
+
+    x_train = im_x[:train_set_size].astype("float32")
+    x_test = im_x[train_set_size:].astype("float32")
     x_train /= 255
     x_test /= 255
 
-    y_train = keras.utils.np_utils.to_categorical(im_y[:x75], category_count)
-    y_test = keras.utils.np_utils.to_categorical(im_y[x75:], category_count)
+    y_train = keras.utils.np_utils.to_categorical(im_y[:train_set_size], category_count)
+    y_test = keras.utils.np_utils.to_categorical(im_y[train_set_size:], category_count)
 
     data = dict()
     data["x_train"] = x_train.tolist()
     data["y_train"] = y_train.tolist()
     data["x_test"] = x_test.tolist()
     data["y_test"] = y_test.tolist()
-    data["test_images"] = image_paths[x75:]
+    data["test_images"] = image_paths[train_set_size:]
 
     return data
 
 
 def generate_trained_model(x_train, y_train, x_test, y_test):
     model = Sequential()
-    model.add(Conv2D(64, kernel_size=(3, 3),
+    model.add(Conv2D(64, kernel_size=(2, 2),
                      activation="relu",
                      input_shape=(IMAGE_WIDTH, IMAGE_HEIGHT, 3)))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Conv2D(128, (3, 3), activation="relu"))
     model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
+    model.add(Dropout(0.35))
     model.add(Flatten())
     model.add(Dense(128, activation="relu"))
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.6))
     model.add(Dense(category_count, activation="softmax"))
 
     model.compile(loss=categorical_crossentropy,
                   optimizer=optimizers.Adam(),
                   metrics=["accuracy"])
 
-    callback = EarlyStopping(monitor="val_loss", patience=4)
+    callback = EarlyStopping(monitor="val_loss", patience=10)
 
     model.fit(x_train, y_train,
               batch_size=64,

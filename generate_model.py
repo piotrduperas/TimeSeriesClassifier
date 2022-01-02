@@ -61,8 +61,34 @@ def add_differentials(data: numpy.ndarray, dimension_count: int, differential_co
     return result
 
 
-def scale_array(data: numpy.ndarray) -> numpy.ndarray:
-    return (data - numpy.min(data)) / numpy.ptp(data)
+def generate_scaler_array(xmin: float, xmax: float, dimension_count: int, differential_count: int) -> numpy.ndarray:
+    base = numpy.array([[xmin], [xmax]])
+
+    v = 14
+    first_diff_base = numpy.array([[xmin / v], [xmax / v]])
+    next_diff_base = numpy.array([[xmin / v / 3], [xmax / v / 3]])
+
+    array = numpy.array(base)
+    first_diff_array = numpy.array(first_diff_base)
+    next_diff_array = numpy.array(next_diff_base)
+
+    for i in range(dimension_count - 1):
+        array = numpy.hstack([array, base])
+        first_diff_array = numpy.hstack([first_diff_array, first_diff_base])
+        next_diff_array = numpy.hstack([next_diff_array, next_diff_base])
+
+    if differential_count == 0:
+        return array
+
+    array = numpy.hstack([array, first_diff_array])
+
+    if differential_count == 1:
+        return array
+
+    for i in range(differential_count - 1):
+        array = numpy.hstack([array, next_diff_array])
+
+    return array
 
 
 def group_data(data: numpy.ndarray) -> numpy.ndarray:
@@ -79,7 +105,6 @@ def group_data(data: numpy.ndarray) -> numpy.ndarray:
             result = numpy.vstack([result, numpy.average(group, axis=0)])
 
     return result
-
 
 def draw_nth_dimension(draw: ImageDraw, data: numpy.ndarray, dimension_count: int, dimension_number: int) -> None:
     row_count = len(data)
@@ -114,7 +139,12 @@ def generate_images(files: List[Tuple[str, str, str]]):
         for i in range(2, len(X) - 2):
             X[i] = (X_raw[i] * 2 + X_raw[i - 1] * 1 + X_raw[i + 1] * 1) / 4
 
-        scaled_X = scale_array(X)
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        xmin = X.min()
+        xmax = X.max()
+
+        scaler.fit(generate_scaler_array(xmin, xmax, dimension_count, 2))
+        scaled_X: numpy.ndarray = scaler.transform(X)
         grouped_X = group_data(scaled_X)
 
         out = Image.new("RGB", (IMAGE_WIDTH, IMAGE_HEIGHT), (0, 0, 0))

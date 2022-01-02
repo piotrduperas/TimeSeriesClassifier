@@ -11,6 +11,7 @@ from keras.callbacks import EarlyStopping
 from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 from keras.losses import categorical_crossentropy
 from keras.models import Sequential
+from keras.utils import np_utils
 from os import path
 from pandas import read_csv
 from PIL import Image, ImageDraw

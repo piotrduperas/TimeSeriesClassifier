@@ -138,7 +138,7 @@ def generate_images(files: List[Tuple[str, str, str]]):
         X = add_differentials(X, dimension_count, 2)
         X_raw = add_differentials(X_raw, dimension_count, 2)
 
-        for i in range(2, len(X) - 2):
+        for i in range(1, len(X) - 1):
             X[i] = (X_raw[i] * 2 + X_raw[i - 1] * 1 + X_raw[i + 1] * 1) / 4
 
         scaler = MinMaxScaler(feature_range=(0, 1))

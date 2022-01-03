@@ -1,5 +1,5 @@
 import json
-import run as run_model
+import download_and_run
 
 
 def run():
@@ -11,7 +11,7 @@ def run():
             dataset = i['Dataset']
 
             try:
-                loss, accuracy = run_model.run(dataset)
+                loss, accuracy = download_and_run.run(dataset)
                 results[dataset] = accuracy
             except:
                 results[dataset] = "0"

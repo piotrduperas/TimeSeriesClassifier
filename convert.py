@@ -1,6 +1,4 @@
 import math
-from typing import Tuple
-
 import numpy
 import shutil
 import sys
@@ -8,6 +6,7 @@ import sys
 from os import path
 from pathlib import Path
 from scipy.io import arff
+from typing import Tuple
 
 
 def load_and_save(input_file: str, output_dir: str) -> None:
@@ -39,16 +38,16 @@ def load_and_save(input_file: str, output_dir: str) -> None:
             file_number += 1
 
 
-if len(sys.argv) != 2:
-    raise SyntaxError("Usage: python3 convert.py model_name")
+def run(model_name: str):
+    print("Converting...")
+    if path.exists(path.join("data", model_name)):
+        shutil.rmtree(path.join("data", model_name))
 
-print("Converting...")
+    load_and_save(path.join("datasets", model_name, f"{model_name}_TRAIN.arff"), path.join("data", model_name, "train"))
+    load_and_save(path.join("datasets", model_name, f"{model_name}_TEST.arff"), path.join("data", model_name, "test"))
 
-model_name = sys.argv[1]
 
-if path.exists(path.join("data", model_name)):
-    shutil.rmtree(path.join("data", model_name))
-
-load_and_save(path.join("datasets", model_name, f"{model_name}_TRAIN.arff"), path.join("data", model_name, "train"))
-load_and_save(path.join("datasets", model_name, f"{model_name}_TEST.arff"), path.join("data", model_name, "test"))
-
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        raise SyntaxError("Usage: python3 convert.py model_name")
+    run(sys.argv[1])

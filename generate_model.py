@@ -1,5 +1,4 @@
 import glob
-
 import imageio
 import keras
 import numpy
@@ -11,6 +10,7 @@ from keras.callbacks import EarlyStopping
 from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 from keras.losses import categorical_crossentropy
 from keras.models import Sequential
+from keras.utils import np_utils
 from os import path
 from pandas import read_csv
 from PIL import Image, ImageDraw
@@ -106,6 +106,7 @@ def group_data(data: numpy.ndarray) -> numpy.ndarray:
 
     return result
 
+
 def draw_nth_dimension(draw: ImageDraw, data: numpy.ndarray, dimension_count: int, dimension_number: int) -> None:
     row_count = len(data)
     start_angle = (dimension_number - 1) / dimension_count * 360
@@ -136,12 +137,12 @@ def generate_images(files: List[Tuple[str, str, str]]):
         X = add_differentials(X, dimension_count, 2)
         X_raw = add_differentials(X_raw, dimension_count, 2)
 
-        for i in range(2, len(X) - 2):
+        for i in range(1, len(X) - 1):
             X[i] = (X_raw[i] * 2 + X_raw[i - 1] * 1 + X_raw[i + 1] * 1) / 4
 
         scaler = MinMaxScaler(feature_range=(0, 1))
-        xmin = X.min()
-        xmax = X.max()
+        xmin = numpy.min(X)
+        xmax = numpy.max(X)
 
         scaler.fit(generate_scaler_array(xmin, xmax, dimension_count, 2))
         scaled_X: numpy.ndarray = scaler.transform(X)
@@ -156,7 +157,7 @@ def generate_images(files: List[Tuple[str, str, str]]):
         out.save(path.join("pictures", f"{path.split(directory)[-1]}_{category}_{file}.png"), "PNG")
 
 
-def prepare_data_for_model(image_paths: List[Union[bytes, str]]):
+def prepare_data_for_model(image_paths: List[Union[bytes, str]], category_count: int):
     im_x = []
     im_y = []
 
@@ -192,7 +193,7 @@ def prepare_data_for_model(image_paths: List[Union[bytes, str]]):
     return data
 
 
-def generate_trained_model(x_train, y_train, x_test, y_test):
+def generate_trained_model(category_count: int, x_train, y_train, x_test, y_test):
     model = Sequential()
     model.add(Conv2D(64, kernel_size=(2, 2),
                      activation="relu",
@@ -222,24 +223,30 @@ def generate_trained_model(x_train, y_train, x_test, y_test):
     return model
 
 
-if len(sys.argv) != 2:
-    raise SyntaxError("Usage: python3 generate_model.py model_name")
+def run(model_name: str):
+    print("Generating images...")
 
-print("Generating images...")
+    clean_up(model_name)
 
-clean_up(sys.argv[1])
+    directories = [path.join("data", model_name, "test"), path.join("data", model_name, "train")]
+    category_count = len(glob.glob(path.join(directories[0], "*")))
+    files = get_files(directories, category_count)
 
-directories = [path.join("data", sys.argv[1], "test"), path.join("data", sys.argv[1], "train")]
-category_count = len(glob.glob(path.join(directories[0], "*")))
-files = get_files(directories, category_count)
+    generate_images(files)
 
-generate_images(files)
+    print("Training model...")
 
-print("Training model...")
+    model_data = prepare_data_for_model(glob.glob(path.join("pictures", "*.png")), category_count)
+    model = generate_trained_model(category_count, model_data["x_train"], model_data["y_train"],
+                                   model_data["x_test"], model_data["y_test"])
 
-model_data = prepare_data_for_model(glob.glob(path.join("pictures", "*.png")))
-model = generate_trained_model(model_data["x_train"], model_data["y_train"], model_data["x_test"], model_data["y_test"])
+    model.save(path.join("models", model_name, "model"))
+    with open(path.join("models", model_name, "test_data"), "w") as file:
+        file.write(str({"category_count": category_count, "test_images": model_data["test_images"]}))
 
-model.save(path.join("models", sys.argv[1], "model"))
-with open(path.join("models", sys.argv[1], "test_data"), "w") as file:
-    file.write(str({"category_count": category_count, "test_images": model_data["test_images"]}))
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        raise SyntaxError("Usage: python3 generate_model.py model_name")
+    run(sys.argv[1])
+

@@ -1,22 +1,19 @@
-import subprocess
 import sys
 
-dataset = sys.argv[1]
-datasetid = dataset.lower()
+from typing import Tuple
 
-result = subprocess.run(
-    ['wget', f'https://www.timeseriesclassification.com/Downloads/{dataset}.zip', '-O', f'datasets/{dataset}.zip'],
-    stdout=subprocess.PIPE)
-print(result.stdout)
+import convert
+import generate_model
+import classify
 
-subprocess.run(['mkdir', f'datasets/{dataset}'], stdout=subprocess.PIPE)
-result = subprocess.run(['unzip', '-o', f'datasets/{dataset}.zip', '-d', f'datasets/{dataset}'], stdout=subprocess.PIPE)
-print(result.stdout)
-subprocess.run(['rm', f'datasets/{dataset}.zip'], stdout=subprocess.PIPE)
 
-subprocess.run(['python3', 'convert.py', dataset], stdout=subprocess.PIPE)
-result = subprocess.run(['python3', 'generate_model.py', dataset], stdout=subprocess.PIPE)
-print(result.stdout)
+def run(dataset: str) -> Tuple[float, float]:
+    convert.run(dataset)
+    generate_model.run(dataset)
+    return classify.run(dataset)
 
-result = subprocess.run(['python3', 'classify.py', dataset])
-print(result.stdout)
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        raise SyntaxError("Usage: python3 run.py dataset")
+    run(sys.argv[1])

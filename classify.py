@@ -3,45 +3,50 @@ import imageio
 import keras
 import numpy
 import sys
-from PIL import Image
-
 
 from os import path
-from typing import List
+from PIL import Image
+from typing import List, Tuple
 
 
-if len(sys.argv) != 2:
-    raise SyntaxError("Usage: python3 classify.py model_name")
+def run(model_name: str) -> Tuple[float, float]:
+    print("Classifying...")
 
-print("Classifying...")
+    model = keras.models.load_model(path.join("models", model_name, "model"))
+    with open(path.join("models", model_name, "test_data")) as file:
+        image_data = ast.literal_eval(file.read())
+        image_paths: List[str] = image_data["test_images"]
+        category_count: int = image_data["category_count"]
 
-model = keras.models.load_model(path.join("models", sys.argv[1], "model"))
-with open(path.join("models", sys.argv[1], "test_data")) as file:
-    image_data = ast.literal_eval(file.read())
-    image_paths: List[str] = image_data["test_images"]
-    category_count: int = image_data["category_count"]
+    im_x = []
+    im_y = []
 
-im_x = []
-im_y = []
+    for image_path in image_paths:
+        im = imageio.imread(image_path)
+        image_name = path.split(image_path)[-1].split('.')[0]
+        image_category = image_name.split('_')[1]
+        im_x.append(im[:, :])
+        im_y.append(int(image_category) - 1)
 
-for image_path in image_paths:
-    im = imageio.imread(image_path)
-    image_name = path.split(image_path)[-1].split('.')[0]
-    image_category = image_name.split('_')[1]
-    im_x.append(im[:, :])
-    im_y.append(int(image_category) - 1)
+    im = Image.open(image_paths[0])
+    IMAGE_WIDTH, IMAGE_HEIGHT = im.size
 
-im = Image.open(image_paths[0])
-IMAGE_WIDTH, IMAGE_HEIGHT = im.size
+    im_x = numpy.array(im_x)
+    im_x = im_x.reshape([im_x.shape[0], IMAGE_WIDTH, IMAGE_HEIGHT, 3])
 
-im_x = numpy.array(im_x)
-im_x = im_x.reshape([im_x.shape[0], IMAGE_WIDTH, IMAGE_HEIGHT, 3])
+    x_test = im_x.astype("float32")
+    x_test /= 255
 
-x_test = im_x.astype("float32")
-x_test /= 255
+    y_test = keras.utils.np_utils.to_categorical(im_y, category_count)
 
-y_test = keras.utils.np_utils.to_categorical(im_y, category_count)
+    score = model.evaluate(x_test, y_test, verbose=0)
+    print("Test loss:", score[0])
+    print("Test accuracy:", score[1])
 
-score = model.evaluate(x_test, y_test, verbose=0)
-print("Test loss:", score[0])
-print("Test accuracy:", score[1])
+    return score[0], score[1]
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        raise SyntaxError("Usage: python3 classify.py model_name")
+    run(sys.argv[1])

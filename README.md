@@ -20,7 +20,7 @@ The program is prepared to easily use data sets in a `*.arff` form that data set
 
 Alternatively, you can run the program on a data set from [timeseriesclassification.com](http://timeseriesclassification.com) collection with this command:
 ```
-python run.py YouDataSet
+python run.py YourDataSet
 ```
 Change `YourDataSet` to a name of some data set from the website. This script downloads the data set, decompress it, and perform all the steps above.
 Please note that this script might only run on Linux systems.

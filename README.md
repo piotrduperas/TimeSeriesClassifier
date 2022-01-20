@@ -7,7 +7,7 @@ Time series classification is performed using convolutional neural networks to c
 Assuming that you have `python3` and `pip3` installed, third-party packages can be installed with:
 
 ```
-pip3 install imageio==2.10.3 keras==2.7.0 numpy==1.23.0 pandas==1.3.4 requests==2.26.0 scikit-learn==1.0.1 tensorflow==2.7.0
+pip3 install imageio==2.10.3 keras==2.7.0 numpy==1.21.5 pandas==1.3.4 requests==2.26.0 scikit-learn==1.0.1 tensorflow==2.7.0
 ```
 
 ### How to run on arbitrary data set?

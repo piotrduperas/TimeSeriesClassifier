@@ -131,8 +131,9 @@ dmypy.json
 # JB IDEs
 .idea/
 
-models
-pictures
-datasets
+models/*/
+pictures/*.png
+datasets/*/
 data
 pictures_2
+to_send

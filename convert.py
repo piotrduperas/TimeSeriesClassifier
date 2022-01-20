@@ -11,7 +11,7 @@ from typing import Tuple
 
 def load_and_save(input_file: str, output_dir: str) -> None:
     data, metadata = arff.loadarff(input_file)
-    categories: Tuple[any] = metadata._attributes[list(metadata._attributes.keys())[-1]][1]
+    categories: Tuple[any] = metadata._attributes[list(metadata._attributes.keys())[-1]].values
 
     file_number = 1
     if isinstance(data[0][0], numpy.floating):

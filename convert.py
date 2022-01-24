@@ -20,7 +20,9 @@ def load_and_save(input_file: str, output_dir: str) -> None:
             values = numpy.array([0 if math.isnan(y) else y for y in numpy.array([x for x in inputs][:-1]).astype("float64")]).transpose()
             values_joined = '\n'.join([str(x) for x in values])
 
-            Path(path.join(output_dir, str(category))).mkdir(parents=True, exist_ok=True)
+            if not path.exists(path.join(output_dir, str(category))):
+                Path(path.join(output_dir, str(category))).mkdir(parents=True, exist_ok=True)
+
             with open(path.join(output_dir, str(category), f"{file_number}.csv"), "w+") as output:
                 output.writelines(values_joined)
 
@@ -31,7 +33,9 @@ def load_and_save(input_file: str, output_dir: str) -> None:
             values = numpy.vstack([numpy.array([0 if math.isnan(y) else y for y in x]) for x in inputs[0]]).transpose()
             values_joined = [f"{','.join([str(y) for y in x])}\n" for x in values]
 
-            Path(path.join(output_dir, str(category))).mkdir(parents=True, exist_ok=True)
+            if not path.exists(path.join(output_dir, str(category))):
+                Path(path.join(output_dir, str(category))).mkdir(parents=True, exist_ok=True)
+
             with open(path.join(output_dir, str(category), f"{file_number}.csv"), "w+") as output:
                 output.writelines(values_joined)
 
